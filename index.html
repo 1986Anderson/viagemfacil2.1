@@ -44,7 +44,7 @@
         <input id="origem" placeholder="Origem" required />
         <input id="destino" placeholder="Destino" required />
         <input type="number" id="valorPass" placeholder="Valor (R$)" step="0.01" required />
-        <button type="submit">Incluir</button>
+        <button type="submit">Incluir<p><strong>Total Arrecadado:</strong> R$ <span id="totalArrecadado">0.00</span></p></button>
       </form>
 
       <h3>Lista de Passageiros</h3>
@@ -54,7 +54,9 @@
             <th>Nome</th>
             <th>Origem</th>
             <th>Destino</th>
-            <th>Valor</th>
+            <th>Valor
+              <p><strong>Total Arrecadado:</strong> R$ <span id="totalArrecadado">0.00</span></p>
+            </th>
             <th>Status</th>
             <th>Ações</th>
           </tr>
@@ -91,8 +93,7 @@
 
     <section>
       <h2>Relatório Diário</h2>
-      <p><strong>Total Passageiros:</strong> <span id="totalPassageiros">0</span></p>
-      <p><strong>Total Encomendas:</strong> <span id="totalEncomendas">0</span></p>
+      
       <p><strong>Total Arrecadado:</strong> R$ <span id="totalArrecadado">0.00</span></p>
     </section>
   </main>
