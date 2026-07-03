@@ -3,74 +3,555 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gestão v2.0</title>
+    <title>Dashboard Unificado - Gestão & Agendamento v5.0</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 (Ícones) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f8f9fa; }
-        .card { border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        body { 
+            background-color: var(--bs-body-bg); 
+            transition: background-color 0.3s, color 0.3s; 
+        }
+        .card { 
+            border-radius: 16px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05); 
+            border: none; 
+        }
+        /* Estilização viva para os Status de Viagem */
+        .linha-embarcado { background-color: rgba(46, 204, 113, 0.12) !important; }
+        .linha-nao-embarcado { background-color: rgba(241, 196, 15, 0.12) !important; }
+        .linha-desistente { 
+            background-color: rgba(231, 76, 60, 0.12) !important; 
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        .badge-status {
+            font-weight: 600;
+            padding: 0.5em 0.8em;
+            border-radius: 8px;
+        }
+        /* Cartões de resumo */
+        .card-resumo {
+            border-left: 5px solid transparent;
+            transition: transform 0.2s;
+        }
+        .card-resumo:hover { transform: translateY(-3px); }
+        .resumo-total { border-left-color: #3498db; }
+        .resumo-pix { border-left-color: #00b894; }
+        .resumo-dinheiro { border-left-color: #ffeaa7; }
+        .resumo-cartao { border-left-color: #a29bfe; }
+        
+        .icon-type { font-size: 1.15rem; }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-    <div class="container">
-        <a class="navbar-brand" href="#"><i class="fas fa-bus"></i> Gestão de Transportes</a>
-        <button class="btn btn-outline-light btn-sm" onclick="toggleTheme()">Alternar Tema</button>
+<!-- Barra de Navegação -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold" href="#">
+            <i class="fas fa-bus-alt me-2"></i> TransControl Pro + Agendamentos
+        </a>
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning btn-sm fw-bold d-flex align-items-center gap-2 shadow-sm" onclick="exportarBackup()">
+                <i class="fas fa-database"></i> Backup do Sistema (.json)
+            </button>
+            <button class="btn btn-outline-light btn-sm d-flex align-items-center gap-1" onclick="toggleTheme()">
+                <i class="fas fa-adjust"></i> Tema
+            </button>
+        </div>
     </div>
 </nav>
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card p-4">
-                <h4><i class="fas fa-ticket-alt"></i> Novo Registro</h4>
-                <hr>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label>Destino</label>
-                        <select id="destino" class="form-select" onchange="atualizarValor()">
-                            <option value="40">São Raimundo Nonato</option>
-                            <option value="30">Anísio de Abreu</option>
-                            <option value="25">São Braz</option>
-                            <option value="18">Gameleira</option>
-                            <option value="manual">Outro</option>
-                        </select>
+<div class="container-fluid px-4">
+    <!-- Indicadores Financeiros Automáticos -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card p-3 card-resumo resumo-total bg-body-tertiary">
+                <small class="text-uppercase fw-bold text-muted">Faturamento Confirmado</small>
+                <h3 id="resumo-total" class="m-0 fw-bold text-primary">R$ 0,00</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 card-resumo resumo-pix bg-body-tertiary">
+                <small class="text-uppercase fw-bold text-muted">Total em PIX</small>
+                <h3 id="resumo-pix" class="m-0 fw-bold text-success">R$ 0,00</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 card-resumo resumo-dinheiro bg-body-tertiary">
+                <small class="text-uppercase fw-bold text-muted">Total em Dinheiro</small>
+                <h3 id="resumo-dinheiro" class="m-0 fw-bold text-warning">R$ 0,00</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 card-resumo resumo-cartao bg-body-tertiary">
+                <small class="text-uppercase fw-bold text-muted">Total em Cartão</small>
+                <h3 id="resumo-cartao" class="m-0 fw-bold text-info">R$ 0,00</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Coluna de Formulários (Cadastro Direto e Agendamento) -->
+        <div class="col-xl-4">
+            <!-- Abas para navegar entre Lançamento Rápido e Agendamento -->
+            <div class="card p-3 mb-4">
+                <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="tab-cadastro-direto" data-bs-toggle="pill" data-bs-target="#panel-direto" type="button" role="tab"><i class="fas fa-bolt me-1"></i> Lançamento Direto</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="tab-agendamento" data-bs-toggle="pill" data-bs-target="#panel-agendamento" type="button" role="tab"><i class="fas fa-calendar-alt me-1"></i> Agendar Passageiro</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="pills-tabContent">
+                    <!-- PAINEL 1: LANÇAMENTO DIRETO (Viagens imediatas ou Encomendas) -->
+                    <div class="tab-pane fade show active" id="panel-direto" role="tabpanel">
+                        <h6 class="fw-bold text-primary mb-3">Lançar Viagem Realizada ou Carga</h6>
+                        <form id="form-cadastro" onsubmit="salvarLancamento(event)">
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Tipo de Entrada</label>
+                                <select id="tipo" class="form-select form-select-sm" onchange="ajustarFormularioPorTipo()" required>
+                                    <option value="passageiro">👤 Passageiro / Paciente</option>
+                                    <option value="encomenda">📦 Encomenda / Carga</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label id="label-nome" class="form-label small fw-semibold">Nome do Passageiro / Paciente</label>
+                                <input type="text" id="nome" class="form-control form-control-sm" placeholder="Ex: Maria Oliveira" required>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Destino</label>
+                                    <select id="destino" class="form-select form-select-sm" onchange="atualizarValorPorDestino()" required>
+                                        <option value="40">São Raimundo Nonato</option>
+                                        <option value="30">Anísio de Abreu</option>
+                                        <option value="25">São Braz</option>
+                                        <option value="18">Gameleira</option>
+                                        <option value="manual">Outro Valor (Manual)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Valor (R$)</label>
+                                    <input type="number" id="valor" class="form-control form-control-sm" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Forma de Pagamento</label>
+                                <select id="pagamento" class="form-select form-select-sm" required>
+                                    <option value="Pix">📱 Pix</option>
+                                    <option value="Dinheiro">💵 Dinheiro</option>
+                                    <option value="Cartão">💳 Cartão</option>
+                                </select>
+                            </div>
+                            <div class="mb-2" id="container-status">
+                                <label class="form-label small fw-semibold">Status do Embarque</label>
+                                <select id="status" class="form-select form-select-sm">
+                                    <option value="Embarcado">✅ Embarcado</option>
+                                    <option value="Não Embarcado">⏳ Não Embarcado</option>
+                                    <option value="Desistente">❌ Desistente</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Data</label>
+                                <input type="date" id="data-registro" class="form-control form-control-sm" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm"><i class="fas fa-check-circle me-1"></i> Adicionar ao Relatório</button>
+                        </form>
                     </div>
-                    <div class="col-md-6">
-                        <label>Valor (R$)</label>
-                        <input type="number" id="valor" class="form-control" readonly>
+
+                    <!-- PAINEL 2: SOLICITAÇÃO DE AGENDAMENTO -->
+                    <div class="tab-pane fade" id="panel-agendamento" role="tabpanel">
+                        <h6 class="fw-bold text-success mb-3">Reservar Assento / Agendar Local de Embarque</h6>
+                        <form id="form-agendamento" onsubmit="salvarAgendamento(event)">
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Nome do Passageiro</label>
+                                <input type="text" id="agendamento-nome" class="form-control form-control-sm" placeholder="Ex: João do Carmo" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Rua, Praça ou Ponto Próximo de Embarque</label>
+                                <input type="text" id="agendamento-local" class="form-control form-control-sm" placeholder="Ex: Rua da Glória / Próximo à Praça Central" required>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Destino</label>
+                                    <select id="agendamento-destino" class="form-select form-select-sm" onchange="atualizarValorAgendamento()" required>
+                                        <option value="40">São Raimundo Nonato</option>
+                                        <option value="30">Anísio de Abreu</option>
+                                        <option value="25">São Braz</option>
+                                        <option value="18">Gameleira</option>
+                                        <option value="manual">Outro Valor</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Valor (R$)</label>
+                                    <input type="number" id="agendamento-valor" class="form-control form-control-sm" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Previsão de Pagamento</label>
+                                <select id="agendamento-pagamento" class="form-select form-select-sm" required>
+                                    <option value="Pix">📱 Pix</option>
+                                    <option value="Dinheiro">💵 Dinheiro</option>
+                                    <option value="Cartão">💳 Cartão</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Data da Viagem</label>
+                                <input type="date" id="agendamento-data" class="form-control form-control-sm" required>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-sm w-100 fw-bold shadow-sm"><i class="fas fa-calendar-plus me-1"></i> Cadastrar Pré-Agendamento</button>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <!-- Coluna de Painéis e Tabelas -->
+        <div class="col-xl-8">
+            <!-- SEÇÃO DE AGENDAMENTOS PENDENTES (Aguardando Confirmação do Motorista) -->
+            <div class="card p-4 mb-4 border-start border-success border-4">
+                <h5 class="fw-bold text-success mb-3"><i class="fas fa-clock me-2"></i>Agendamentos Pendentes <span id="contador-agendamentos" class="badge bg-success rounded-pill ms-1 fs-6">0</span></h5>
+                <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-sm align-middle table-bordered border-light">
+                        <thead class="table-success text-dark small text-uppercase">
+                            <tr>
+                                <th>Data</th>
+                                <th>Passageiro</th>
+                                <th>Local de Ponto / Embarque</th>
+                                <th>Destino</th>
+                                <th>Pagamento</th>
+                                <th>Valor</th>
+                                <th class="text-center">Ações do Motorista</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-agendamentos">
+                            <!-- Inserido dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SEÇÃO PRINCIPAL DE CONTROLE E HISTÓRICO DE VIAGENS -->
             <div class="card p-4">
-                <h5><i class="fas fa-cog"></i> Preços</h5>
-                <input type="text" class="form-control mb-2" placeholder="Ex: Ajustar preço SRN">
-                <button class="btn btn-success w-100">Salvar Alterações</button>
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+                    <h5 class="fw-bold m-0"><i class="fas fa-chart-line text-primary me-2"></i>Histórico & Relatório de Viagens</h5>
+                    <button class="btn btn-success btn-sm fw-bold shadow-sm d-flex align-items-center gap-2" onclick="exportarPlanilhaCSV()">
+                        <i class="fas fa-file-csv"></i> Exportar Dados (CSV)
+                    </button>
+                </div>
+
+                <!-- Filtros de Relatório Diário, Semanal e Mensal -->
+                <div class="d-flex align-items-center bg-body-secondary p-2 rounded-3 mb-3 gap-2 flex-wrap">
+                    <span class="small fw-bold px-2 text-muted text-uppercase"><i class="fas fa-filter"></i> Período:</span>
+                    <button class="btn btn-sm btn-primary filter-btn px-3 rounded-2" onclick="filtrarPeriodo('todos', this)">Todos</button>
+                    <button class="btn btn-sm btn-outline-primary filter-btn px-3 rounded-2" onclick="filtrarPeriodo('diario', this)">Diário</button>
+                    <button class="btn btn-sm btn-outline-primary filter-btn px-3 rounded-2" onclick="filtrarPeriodo('semanal', this)">Semanal</button>
+                    <button class="btn btn-sm btn-outline-primary filter-btn px-3 rounded-2" onclick="filtrarPeriodo('mensal', this)">Mensal</button>
+                </div>
+
+                <!-- Tabela de Movimentações -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light text-secondary small text-uppercase">
+                            <tr>
+                                <th style="width: 110px;">Data</th>
+                                <th>Identificação / Nome</th>
+                                <th>Pagamento</th>
+                                <th>Status</th>
+                                <th class="text-end text-primary" style="width: 140px;">Passageiro</th>
+                                <th class="text-end text-success" style="width: 140px;">Encomenda</th>
+                                <th class="text-center" style="width: 60px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-corpo">
+                            <!-- Gerado dinamicamente via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Alternar modo claro/escuro
+    // Bancos de Dados locais reativos na memória do navegador
+    let bdViagens = JSON.parse(localStorage.getItem('bd_viagens_sistema')) || [];
+    let bdAgendamentos = JSON.parse(localStorage.getItem('bd_agendamentos_sistema')) || [];
+    let filtroAtivo = 'todos';
+
+    // Iniciar datas padrões nos inputs ao carregar a tela
+    document.getElementById('data-registro').valueAsDate = new Date();
+    document.getElementById('agendamento-data').valueAsDate = new Date();
+    atualizarValorPorDestino();
+    atualizarValorAgendamento();
+
     function toggleTheme() {
         const html = document.documentElement;
         html.dataset.bsTheme = html.dataset.bsTheme === 'light' ? 'dark' : 'light';
     }
 
-    // Atualizar valor automaticamente
-    function atualizarValor() {
+    // Gerenciador de preços automáticos por destino (Painel Lançamento Direto)
+    function atualizarValorPorDestino() {
         const select = document.getElementById('destino');
         const input = document.getElementById('valor');
-        input.value = select.value === 'manual' ? '' : select.value;
-        if(select.value === 'manual') input.readOnly = false;
-        else input.readOnly = true;
+        if (select.value === 'manual') { input.value = ''; input.readOnly = false; } 
+        else { input.value = select.value; input.readOnly = true; }
     }
+
+    // Gerenciador de preços automáticos por destino (Painel Agendamentos)
+    function atualizarValorAgendamento() {
+        const select = document.getElementById('agendamento-destino');
+        const input = document.getElementById('agendamento-valor');
+        if (select.value === 'manual') { input.value = ''; input.readOnly = false; } 
+        else { input.value = select.value; input.readOnly = true; }
+    }
+
+    function ajustarFormularioPorTipo() {
+        const tipo = document.getElementById('tipo').value;
+        const labelNome = document.getElementById('label-nome');
+        const containerStatus = document.getElementById('container-status');
+        if (tipo === 'encomenda') {
+            labelNome.innerText = "Descrição da Encomenda / Objeto";
+            containerStatus.style.display = 'none';
+        } else {
+            labelNome.innerText = "Nome do Passageiro / Paciente";
+            containerStatus.style.display = 'block';
+        }
+    }
+
+    // --- SALVAR LANÇAMENTO DIRETO ---
+    function salvarLancamento(e) {
+        e.preventDefault();
+        const tipoSelecionado = document.getElementById('tipo').value;
+        const novoLancamento = {
+            id: Date.now(),
+            tipo: tipoSelecionado,
+            nome: document.getElementById('nome').value,
+            valor: parseFloat(document.getElementById('valor').value) || 0,
+            pagamento: document.getElementById('pagamento').value,
+            status: tipoSelecionado === 'passageiro' ? document.getElementById('status').value : 'Embarcado',
+            data: document.getElementById('data-registro').value
+        };
+        bdViagens.push(novoLancamento);
+        atualizarSistemasLocais();
+        document.getElementById('nome').value = '';
+        ajustarFormularioPorTipo();
+        atualizarValorPorDestino();
+    }
+
+    // --- CADASTRAR NOVO AGENDAMENTO ---
+    function salvarAgendamento(e) {
+        e.preventDefault();
+        const selectDestino = document.getElementById('agendamento-destino');
+        const destinoTexto = selectDestino.options[selectDestino.selectedIndex].text;
+
+        const novoAgendamento = {
+            id: Date.now(),
+            nome: document.getElementById('agendamento-nome').value,
+            local: document.getElementById('agendamento-local').value,
+            destinoTexto: destinoTexto,
+            valor: parseFloat(document.getElementById('agendamento-valor').value) || 0,
+            pagamento: document.getElementById('agendamento-pagamento').value,
+            data: document.getElementById('agendamento-data').value
+        };
+
+        bdAgendamentos.push(novoAgendamento);
+        atualizarSistemasLocais();
+        
+        // Limpar campos
+        document.getElementById('agendamento-nome').value = '';
+        document.getElementById('agendamento-local').value = '';
+        atualizarValorAgendamento();
+    }
+
+    // --- CONFIRMAÇÃO DO MOTORISTA (Transforma agendamento em Viagem Realizada) ---
+    function confirmarEmbarqueAgendado(id) {
+        const agendamento = bdAgendamentos.find(item => item.id === id);
+        if (agendamento) {
+            // Cria a entrada de viagem confirmada baseada no agendamento
+            const novaViagem = {
+                id: Date.now(),
+                tipo: 'passageiro',
+                nome: `${agendamento.nome} (📍 Ponto: ${agendamento.local})`,
+                valor: agendamento.valor,
+                pagamento: agendamento.pagamento,
+                status: 'Embarcado', // Confirmado pelo motorista
+                data: agendamento.data
+            };
+            
+            bdViagens.push(novaViagem);
+            bdAgendamentos = bdAgendamentos.filter(item => item.id !== id); // Remove da lista de espera
+            atualizarSistemasLocais();
+        }
+    }
+
+    // --- REJEITAR OU DESISTENTE NO AGENDAMENTO ---
+    function cancelarAgendamento(id) {
+        const agendamento = bdAgendamentos.find(item => item.id === id);
+        if (agendamento && confirm("Marcar este agendamento como Desistente no histórico?")) {
+            const novaViagemDesistente = {
+                id: Date.now(),
+                tipo: 'passageiro',
+                nome: `${agendamento.nome} (📍 Ponto: ${agendamento.local})`,
+                valor: agendamento.valor,
+                pagamento: agendamento.pagamento,
+                status: 'Desistente',
+                data: agendamento.data
+            };
+            bdViagens.push(novaViagemDesistente);
+            bdAgendamentos = bdAgendamentos.filter(item => item.id !== id);
+            atualizarSistemasLocais();
+        }
+    }
+
+    function excluirItemViagem(id) {
+        if(confirm("Deseja mesmo remover este lançamento definitivo?")) {
+            bdViagens = bdViagens.filter(item => item.id !== id);
+            atualizarSistemasLocais();
+        }
+    }
+
+    function atualizarSistemasLocais() {
+        localStorage.setItem('bd_viagens_sistema', JSON.stringify(bdViagens));
+        localStorage.setItem('bd_annotations_sistema', JSON.stringify(bdAgendamentos)); // Mantendo chave de segurança antiga
+        localStorage.setItem('bd_agendamentos_sistema', JSON.stringify(bdAgendamentos));
+        renderizarDashboard();
+    }
+
+    function filtrarPeriodo(tipoFiltro, botaoClicado) {
+        filtroAtivo = tipoFiltro;
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.replace('btn-primary', 'btn-outline-primary'));
+        botaoClicado.classList.replace('btn-outline-primary', 'btn-primary');
+        renderizarDashboard();
+    }
+
+    function validarFiltroData(dataDoItem) {
+        const hoje = new Date();
+        const dataReg = new Date(dataDoItem + 'T00:00:00');
+        if (filtroAtivo === 'diario') return hoje.toDateString() === dataReg.toDateString();
+        if (filtroAtivo === 'semanal') {
+            const seteDiasAtras = new Date();
+            seteDiasAtras.setDate(hoje.getDate() - 7);
+            return dataReg >= seteDiasAtras && dataReg <= hoje;
+        } 
+        if (filtroAtivo === 'mensal') return hoje.getMonth() === dataReg.getMonth() && hoje.getFullYear() === dataReg.getFullYear();
+        return true;
+    }
+
+    // --- CONSTRUÇÃO DE TELAS E ARRECADAÇÃO ---
+    function renderizarDashboard() {
+        // 1. Renderizar Agendamentos Pendentes
+        const tabelaAgendamentos = document.getElementById('tabela-agendamentos');
+        tabelaAgendamentos.innerHTML = '';
+        document.getElementById('contador-agendamentos').innerText = bdAgendamentos.length;
+
+        bdAgendamentos.forEach(item => {
+            const tr = document.createElement('tr');
+            const dataFmt = item.data.split('-').reverse().join('/');
+            tr.innerHTML = `
+                <td><span class="badge bg-dark">${dataFmt}</span></td>
+                <td><strong>${item.nome}</strong></td>
+                <td><i class="fas fa-map-marker-alt text-danger me-1"></i> <span class="text-muted small">${item.local}</span></td>
+                <td><small>${item.destinoTexto}</small></td>
+                <td><span class="badge bg-secondary">${item.pagamento}</span></td>
+                <td class="fw-bold text-success">R$ ${item.valor.toFixed(2)}</td>
+                <td class="text-center">
+                    <button class="btn btn-success btn-xs py-0 px-2 fw-bold me-1" onclick="confirmarEmbarqueAgendado(${item.id})"><i class="fas fa-check"></i> Confirmar</button>
+                    <button class="btn btn-danger btn-xs py-0 px-2 fw-bold" onclick="cancelarAgendamento(${item.id})"><i class="fas fa-times"></i> Desistiu</button>
+                </td>
+            `;
+            tabelaAgendamentos.appendChild(tr);
+        });
+
+        // 2. Renderizar Histórico Geral de Viagens Concluídas
+        const tabelaCorpo = document.getElementById('tabela-corpo');
+        tabelaCorpo.innerHTML = '';
+        let caixaTotal = 0, caixaPix = 0, caixaDinheiro = 0, caixaCartao = 0;
+
+        bdViagens.filter(item => validarFiltroData(item.data)).forEach(item => {
+            const tr = document.createElement('tr');
+            if (item.tipo === 'passageiro') {
+                if (item.status === 'Embarcado') tr.classList.add('linha-embarcado');
+                if (item.status === 'Não Embarcado') tr.classList.add('linha-nao-embarcado');
+                if (item.status === 'Desistente') tr.classList.add('linha-desistente');
+            } else {
+                tr.classList.add('linha-embarcado');
+            }
+
+            const icone = item.tipo === 'passageiro' ? '<i class="fas fa-user text-primary me-2 icon-type"></i>' : '<i class="fas fa-box text-success me-2 icon-type"></i>';
+            const dataFormatada = item.data.split('-').reverse().join('/');
+            const txtPassageiro = item.tipo === 'passageiro' ? `R$ ${item.valor.toFixed(2)}` : '—';
+            const txtEncomenda = item.tipo === 'encomenda' ? `R$ ${item.valor.toFixed(2)}` : '—';
+
+            let badgeColor = "bg-success";
+            if (item.status === 'Não Embarcado') badgeColor = "bg-warning text-dark";
+            if (item.status === 'Desistente') badgeColor = "bg-danger";
+
+            tr.innerHTML = `
+                <td><small class="fw-bold">${dataFormatada}</small></td>
+                <td>${icone}<strong>${item.nome}</strong></td>
+                <td><span class="badge bg-body-secondary text-body border shadow-sm">${item.pagamento}</span></td>
+                <td><span class="badge ${badgeColor} badge-status">${item.status}</span></td>
+                <td class="text-end fw-bold text-primary">${txtPassageiro}</td>
+                <td class="text-end fw-bold text-success">${txtEncomenda}</td>
+                <td class="text-center">
+                    <button class="btn btn-link text-danger p-0" onclick="excluirItemViagem(${item.id})"><i class="fas fa-trash-alt"></i></button>
+                </td>
+            `;
+            tabelaCorpo.appendChild(tr);
+
+            if (item.status !== 'Desistente') {
+                caixaTotal += item.valor;
+                if (item.pagamento === 'Pix') caixaPix += item.valor;
+                if (item.pagamento === 'Dinheiro') caixaDinheiro += item.valor;
+                if (item.pagamento === 'Cartão') caixaCartao += item.valor;
+            }
+        });
+
+        document.getElementById('resumo-total').innerText = `R$ ${caixaTotal.toFixed(2)}`;
+        document.getElementById('resumo-pix').innerText = `R$ ${caixaPix.toFixed(2)}`;
+        document.getElementById('resumo-dinheiro').innerText = `R$ ${caixaDinheiro.toFixed(2)}`;
+        document.getElementById('resumo-cartao').innerText = `R$ ${caixaCartao.toFixed(2)}`;
+    }
+
+    function exportarPlanilhaCSV() {
+        if (bdViagens.length === 0) { alert("Não existem dados para exportar."); return; }
+        let csv = 'Data;Tipo;Nome-Local;Forma Pagamento;Status;Valor Passageiro;Valor Encomenda\n';
+        bdViagens.forEach(item => {
+            const vPass = item.tipo === 'passageiro' ? item.valor.toFixed(2) : '0.00';
+            const vEnc = item.tipo === 'encomenda' ? item.valor.toFixed(2) : '0.00';
+            csv += `${item.data};${item.tipo};${item.nome};${item.pagamento};${item.status};${vPass};${vEnc}\n`;
+        });
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.setAttribute("download", `relatorio_viagens_${filtroAtivo}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function exportarBackup() {
+        const dadosExportacao = { viagens: bdViagens, agendamentos: bdAgendamentos };
+        const dataConfig = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dadosExportacao, null, 2));
+        const downloadAnchor = document.createElement('a');
+        const stringData = new Date().toISOString().slice(0,10);
+        downloadAnchor.setAttribute("href", dataConfig);
+        downloadAnchor.setAttribute("download", `BACKUP_GERAL_SISTEMA_${stringData}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.removeChild(downloadAnchor);
+    }
+
+    renderizarDashboard();
 </script>
 
+<!-- Bootstrap 5 Bundle com JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
