@@ -21,20 +21,20 @@
             margin-bottom: 1rem;
         }
         
-        /* Animação de Alerta Piscante */
+        /* Animação de Alerta Piscante Otimizada */
         @keyframes pulsarAlerta {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.02); opacity: 0.85; box-shadow: 0 0 15px rgba(231, 76, 60, 0.6); }
-            100% { transform: scale(1); opacity: 1; }
+            0% { transform: scale(1); box-shadow: 0 0 0px rgba(231, 76, 60, 0); }
+            50% { transform: scale(1.01); box-shadow: 0 0 12px rgba(231, 76, 60, 0.4); }
+            100% { transform: scale(1); box-shadow: 0 0 0px rgba(231, 76, 60, 0); }
         }
         @keyframes pulsarSucesso {
             0% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.6; }
             100% { opacity: 1; }
         }
         
         .alerta-piscante-motorista {
-            animation: pulsarAlerta 1.5s infinite ease-in-out;
+            animation: pulsarAlerta 2s infinite ease-in-out;
             border: 2px solid #e74c3c !important;
         }
         .badge-piscante-espera {
@@ -42,9 +42,9 @@
         }
 
         /* Estilização das Linhas do Histórico */
-        .linha-embarcado { background-color: rgba(46, 204, 113, 0.12) !important; }
+        .linha-embarcado { background-color: rgba(46, 204, 113, 0.1) !important; }
         .linha-desistente { 
-            background-color: rgba(231, 76, 60, 0.12) !important; 
+            background-color: rgba(231, 76, 60, 0.08) !important; 
             text-decoration: line-through;
             opacity: 0.7;
         }
@@ -52,11 +52,20 @@
         .secao-sistema { display: none; }
         .secao-ativa { display: block !important; }
 
+        /* Notificação Compacta Flutuante */
+        .notificacao-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1050;
+            display: none;
+            max-width: 350px;
+        }
+
         /* --- ADAPTAÇÃO EXCLUSIVA PARA SMARTPHONES --- */
         @media (max-width: 767.98px) {
             .navbar-brand { font-size: 1.1rem; }
             
-            /* Transforma tabelas complexas em blocos/cards empilhados no celular */
             .table-responsive-mobile table, 
             .table-responsive-mobile thead, 
             .table-responsive-mobile tbody, 
@@ -125,14 +134,27 @@
 
 <div class="container-fluid px-3">
 
+    <!-- TOAST DE ALERTA SONORO/VISUAL -->
+    <div id="toast-alerta-novo" class="toast align-items-center text-white bg-danger border-0 notificacao-toast shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="fas fa-bell fa-bounce"></i>
+                <div>
+                    <strong>Novo agendamento recebido!</strong><br>
+                    <span id="toast-mensagem-detalhe" class="small">Verifique a lista de pendentes.</span>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="fecharToastAlerta()" aria-label="Close"></button>
+        </div>
+    </div>
+
     <!-- ======================================================== -->
-    <!-- 1. ÁREA PÚBLICA: FORMULÁRIO DO CLIENTE (SEM CAMPOS DE VALOR) -->
+    <!-- 1. ÁREA PÚBLICA: FORMULÁRIO DO CLIENTE -->
     <!-- ======================================================== -->
     <div id="secao-publico" class="secao-sistema secao-ativa">
         <div class="row justify-content-center">
             <div class="col-xl-6 col-lg-8 col-md-10">
                 
-                <!-- Feedback Dinâmico de Alertas Piscantes -->
                 <div id="status-ultimo-agendamento" class="mb-3 d-none"></div>
 
                 <div class="card p-3 border-top border-primary border-4 text-center">
@@ -201,7 +223,7 @@
                 <div class="card p-4 mt-4">
                     <div class="text-center mb-3">
                         <i class="fas fa-user-shield text-primary fa-2x mb-1"></i>
-                        <h5 class="fw-bold m-0">Painel do Motorista</h5>
+                        <h5 class="fw-bold m-0">Painel Administrativo</h5>
                     </div>
                     <div id="login-erro" class="alert alert-danger d-none small p-2 text-center">Credenciais Incorretas!</div>
                     <form onsubmit="efetuarLogin(event)">
@@ -228,37 +250,40 @@
         
         <!-- CARD ALERTA CRÍTICO DE ESQUECIMENTO -->
         <div id="alerta-esquecimento-motorista" class="alert alert-danger alerta-piscante-motorista d-none p-3 mb-3">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
-                <div>
-                    <h6 class="fw-bold m-0 text-danger">ATENÇÃO MOTORISTA!</h6>
-                    <span class="small text-dark">Há novos passageiros ou encomendas aguardando! Você deve <strong>Aprovar</strong> ou <strong>Cancelar</strong> abaixo para limpar o alerta.</span>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                    <div>
+                        <h6 class="fw-bold m-0 text-danger">🚨 NOVOS PEDIDOS DETECTADOS NO SERVIDOR!</h6>
+                        <span class="small text-dark">Há passageiros ou cargas aguardando despacho de frota.</span>
+                    </div>
                 </div>
+                <button class="btn btn-danger btn-sm fw-bold" onclick="silenciarAlertaSonoro()"><i class="fas fa-volume-mute"></i> Silenciar Bipe</button>
             </div>
         </div>
 
         <!-- Indicadores Financeiros -->
         <div class="row g-2 mb-3">
             <div class="col-6 col-md-3">
-                <div class="card p-2 card-resumo resumo-total bg-body-tertiary mb-0">
+                <div class="card p-2 card-resumo bg-body-tertiary mb-0">
                     <small class="text-muted text-uppercase" style="font-size:0.7rem;">Confirmado</small>
                     <h5 id="resumo-total" class="m-0 fw-bold text-primary">R$ 0,00</h5>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card p-2 card-resumo resumo-pix bg-body-tertiary mb-0">
+                <div class="card p-2 card-resumo bg-body-tertiary mb-0">
                     <small class="text-muted text-uppercase" style="font-size:0.7rem;">PIX</small>
                     <h5 id="resumo-pix" class="m-0 fw-bold text-success">R$ 0,00</h5>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card p-2 card-resumo resumo-dinheiro bg-body-tertiary mb-0">
+                <div class="card p-2 card-resumo bg-body-tertiary mb-0">
                     <small class="text-muted text-uppercase" style="font-size:0.7rem;">Dinheiro</small>
                     <h5 id="resumo-dinheiro" class="m-0 fw-bold text-warning">R$ 0,00</h5>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card p-2 card-resumo resumo-cartao bg-body-tertiary mb-0">
+                <div class="card p-2 card-resumo bg-body-tertiary mb-0">
                     <small class="text-muted text-uppercase" style="font-size:0.7rem;">Cartão</small>
                     <h5 id="resumo-cartao" class="m-0 fw-bold text-info">R$ 0,00</h5>
                 </div>
@@ -266,10 +291,12 @@
         </div>
 
         <div class="row g-3">
-            <!-- Lançamento Direto de Caixa -->
+            <!-- Coluna de Cadastros e Lançamento -->
             <div class="col-xl-4 col-lg-5">
-                <div class="card p-3">
-                    <h6 class="fw-bold text-primary mb-2"><i class="fas fa-plus-circle me-1"></i>Lançamento Direto</h6>
+                
+                <!-- LANÇAMENTO DIRETO -->
+                <div class="card p-3 mb-3">
+                    <h6 class="fw-bold text-primary mb-2"><i class="fas fa-plus-circle me-1"></i>Lançamento de Viagem</h6>
                     <form id="form-cadastro" onsubmit="salvarLancamentoDireto(event)">
                         <div class="mb-2">
                             <select id="tipo" class="form-select form-select-sm" onchange="ajustarFormularioInterno()" required>
@@ -282,8 +309,15 @@
                         </div>
                         
                         <div class="mb-2">
-                            <label class="form-label small fw-semibold mb-1">Destino / Rota</label>
                             <input type="text" id="destino-direto" class="form-control form-control-sm" placeholder="Ex: São Raimundo Nonato, Zona Rural..." required>
+                        </div>
+
+                        <!-- SELEÇÃO DA VAN RESPONSÁVEL -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">Selecionar Van/Motorista</label>
+                            <select id="select-van-viagem" class="form-select form-select-sm" required>
+                                <option value="">Sem Van Cadastrada</option>
+                            </select>
                         </div>
 
                         <div class="row g-2 mb-2">
@@ -318,35 +352,75 @@
                         </div>
                         <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold"><i class="fas fa-plus"></i> Registrar</button>
                     </form>
-                    <div class="row g-1 mt-2">
+                </div>
+
+                <!-- NOVO: CADASTRO DE PROPRIETÁRIO E VANS -->
+                <div class="card p-3 mb-3 border-start border-primary border-4">
+                    <h6 class="fw-bold text-primary mb-2"><i class="fas fa-id-card me-1"></i>Controle de Frota (Vans)</h6>
+                    <form id="form-cadastro-dono-van" onsubmit="cadastrarDonoEVan(event)">
+                        <div class="mb-2">
+                            <input type="text" id="cad-nome-dono" class="form-control form-control-sm" placeholder="Nome do Proprietário/Motorista" required>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <input type="text" id="cad-placa-van" class="form-control form-control-sm" placeholder="Placa (Ex: ABC-1234)" required>
+                            </div>
+                            <div class="col-6">
+                                <input type="text" id="cad-modelo-van" class="form-control form-control-sm" placeholder="Modelo (Ex: Ducato)" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-primary w-100 fw-bold"><i class="fas fa-save"></i> Vincular & Cadastrar Van</button>
+                    </form>
+                    
+                    <div class="mt-2" style="max-height: 120px; overflow-y: auto;">
+                        <ul id="lista-vans-frotas" class="list-group list-group-flush small">
+                            <!-- Inserido dinamicamente -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Exportações -->
+                <div class="card p-3">
+                    <div class="row g-1">
                         <div class="col-6"><button class="btn btn-xs btn-outline-secondary w-100" style="font-size:0.75rem" onclick="exportarPlanilhaCSV()"><i class="fas fa-file-csv"></i> Planilha</button></div>
                         <div class="col-6"><button class="btn btn-xs btn-outline-warning text-dark w-100" style="font-size:0.75rem" onclick="exportarBackup()"><i class="fas fa-database"></i> Backup</button></div>
                     </div>
                 </div>
+
             </div>
 
-            <!-- Listas -->
+            <!-- Coluna de Listas de Atendimento -->
             <div class="col-xl-8 col-lg-7">
                 
                 <!-- Aguardando Coleta / Aprovação -->
                 <div class="card p-3 border-start border-success border-4">
-                    <h6 class="fw-bold text-success mb-2">
-                        <i class="fas fa-route me-1"></i>Pedidos Pendentes 
-                        <span id="contador-agendamentos" class="badge bg-success rounded-pill ms-1">0</span>
+                    <h6 class="fw-bold text-success mb-2 d-flex align-items-center justify-content-between">
+                        <span><i class="fas fa-route me-1"></i>Pedidos Pendentes (Multiterminal)</span>
+                        <span id="contador-agendamentos" class="badge bg-success rounded-pill">0</span>
                     </h6>
                     
-                    <!-- Campo Dinâmico para Atribuir Valor antes de aceitar o pedido externo -->
-                    <div id="area-definicao-preco-pendente" class="bg-light p-2 rounded mb-2 border d-none">
-                        <span class="small fw-bold text-secondary d-block mb-1">Defina o valor cobrado para o pedido selecionado:</span>
-                        <div class="d-flex gap-2">
-                            <select id="valor-pedido-pendente" class="form-select form-select-sm w-auto">
-                                <option value="10">R$ 10,00</option>
-                                <option value="15">R$ 15,00</option>
-                                <option value="20">R$ 20,00</option>
-                                <option value="25">R$ 25,00</option>
-                                <option value="30">R$ 30,00</option>
-                            </select>
-                            <input type="number" id="valor-pedido-manual" class="form-control form-control-sm w-25" placeholder="Outro valor">
+                    <!-- Configuração de Preço e Atribuição de Van para o Despacho -->
+                    <div id="area-definicao-preco-pendente" class="bg-light p-3 rounded mb-2 border d-none">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <span class="small fw-bold text-secondary d-block mb-1">1. Preço da Viagem:</span>
+                                <div class="d-flex gap-1">
+                                    <select id="valor-pedido-pendente" class="form-select form-select-sm w-auto">
+                                        <option value="10">R$ 10,00</option>
+                                        <option value="15">R$ 15,00</option>
+                                        <option value="20">R$ 20,00</option>
+                                        <option value="25">R$ 25,00</option>
+                                        <option value="30">R$ 30,00</option>
+                                    </select>
+                                    <input type="number" id="valor-pedido-manual" class="form-control form-control-sm" placeholder="Outro R$">
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <span class="small fw-bold text-secondary d-block mb-1">2. Delegar para Van/Motorista:</span>
+                                <select id="select-van-despacho" class="form-select form-select-sm" required>
+                                    <option value="">Nenhuma cadastrada - Lançar sem Van</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -357,7 +431,7 @@
                                     <th>Tipo</th>
                                     <th>Data</th>
                                     <th>Nome / Descrição</th>
-                                    <th>Onde Buscar (Rua/Ponto)</th>
+                                    <th>Buscar Em</th>
                                     <th>Destino</th>
                                     <th class="text-center">Ação do Motorista</th>
                                 </tr>
@@ -369,7 +443,7 @@
 
                 <!-- Histórico Consolidado -->
                 <div class="card p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                         <h6 class="fw-bold m-0"><i class="fas fa-history text-secondary me-1"></i>Relatório Geral de Caixa</h6>
                         <div class="btn-group btn-group-sm">
                             <button class="btn btn-outline-primary filter-btn active" onclick="filtrarPeriodo('todos', this)">Tudo</button>
@@ -384,6 +458,7 @@
                                 <tr>
                                     <th>Data</th>
                                     <th>Identificação / Registro</th>
+                                    <th>Frota / Van</th>
                                     <th>Pgto</th>
                                     <th>Status</th>
                                     <th class="text-end text-primary">Passageiro</th>
@@ -403,11 +478,20 @@
 </div>
 
 <script>
+    // Configurações do servidor centralizado. Caso utilize uma API real futuramente, substitua a URL base.
+    const URL_API_SERVIDOR = null; // Ex: 'https://seu-servidor-api.com/api'
+
     let bdViagens = JSON.parse(localStorage.getItem('bd_viagens_sistema')) || [];
     let bdAgendamentos = JSON.parse(localStorage.getItem('bd_agendamentos_sistema')) || [];
+    let bdVans = JSON.parse(localStorage.getItem('bd_vans_sistema')) || [
+        { id: 1, dono: "Anderson Ribeiro", placa: "ARS-2026", modelo: "Mercedes Sprinter" }
+    ];
+    
     let filtroAtivo = 'todos';
     let motoristaLogado = false;
     let idUltimoAgendamento = localStorage.getItem('id_ultimo_agendamento') || null;
+    let audioContext = null;
+    let intervaloBipe = null;
 
     document.getElementById('pub-data').valueAsDate = new Date();
     document.getElementById('data-registro').valueAsDate = new Date();
@@ -425,6 +509,153 @@
         if (secaoId === 'publico') checarStatusParaPassageiro();
     }
 
+    // --- EMISSÃO DE SINAL SONORO (BIPE INTUITIVO) ---
+    function dispararSomNotificacao() {
+        try {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, audioContext.currentTime); // Nota Ré (suave)
+            gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.15);
+        } catch(e) { console.log("Aguardando interação para áudio."); }
+    }
+
+    function iniciarLoopAlertaSonoro() {
+        if (!intervaloBipe) {
+            dispararSomNotificacao();
+            intervaloBipe = setInterval(dispararSomNotificacao, 4000);
+        }
+    }
+
+    function silenciarAlertaSonoro() {
+        if (intervaloBipe) {
+            clearInterval(intervaloBipe);
+            intervaloBipe = null;
+        }
+    }
+
+    // --- CADASTRO E GERENCIAMENTO DE VANS (MULTIVAN) ---
+    function cadastrarDonoEVan(e) {
+        e.preventDefault();
+        const dono = document.getElementById('cad-nome-dono').value.trim();
+        const placa = document.getElementById('cad-placa-van').value.trim().toUpperCase();
+        const modelo = document.getElementById('cad-modelo-van').value.trim();
+
+        const novaVan = {
+            id: Date.now(),
+            dono: dono,
+            placa: placa,
+            modelo: modelo
+        };
+
+        bdVans.push(novaVan);
+        localStorage.setItem('bd_vans_sistema', JSON.stringify(bdVans));
+        
+        document.getElementById('cad-nome-dono').value = '';
+        document.getElementById('cad-placa-van').value = '';
+        document.getElementById('cad-modelo-van').value = '';
+        
+        renderizarListaDeVans();
+        renderizarDashboard();
+    }
+
+    function removerVan(id) {
+        if (confirm("Deseja remover este vínculo de Van?")) {
+            bdVans = bdVans.filter(v => v.id !== id);
+            localStorage.setItem('bd_vans_sistema', JSON.stringify(bdVans));
+            renderizarListaDeVans();
+            renderizarDashboard();
+        }
+    }
+
+    function renderizarListaDeVans() {
+        const lista = document.getElementById('lista-vans-frotas');
+        const selectViagem = document.getElementById('select-van-viagem');
+        const selectDespacho = document.getElementById('select-van-despacho');
+        
+        lista.innerHTML = '';
+        selectViagem.innerHTML = '<option value="">Sem Van (Lançamento Avulso)</option>';
+        selectDespacho.innerHTML = '<option value="">Nenhuma selecionada - Sem Van</option>';
+
+        bdVans.forEach(van => {
+            // Renderiza na lista visual lateral
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center px-0 py-1 bg-transparent border-bottom';
+            li.innerHTML = `
+                <span><strong>${van.dono}</strong> - <span class="badge bg-secondary">${van.placa}</span> <small>(${van.modelo})</small></span>
+                <button class="btn btn-sm text-danger p-0 border-0 bg-transparent" onclick="removerVan(${van.id})"><i class="fas fa-times-circle"></i></button>
+            `;
+            lista.appendChild(li);
+
+            // Adiciona como opção nos seletores de envio
+            const opt1 = new Option(`${van.dono} (${van.placa})`, `${van.dono} (${van.placa})`);
+            const opt2 = new Option(`${van.dono} (${van.placa})`, `${van.dono} (${van.placa})`);
+            selectViagem.add(opt1);
+            selectDespacho.add(opt2);
+        });
+    }
+
+    // --- ATUALIZAÇÃO SÍNCRONA COM O SERVIDOR (MULTITERMINAL) ---
+    async function sincronizarComServidor() {
+        if (URL_API_SERVIDOR) {
+            try {
+                // Requisição real para sincronizar o banco
+                const res = await fetch(`${URL_API_SERVIDOR}/agendamentos`);
+                const dados = await res.json();
+                processarNovosAgendamentos(dados);
+            } catch (err) {
+                console.warn("Erro ao contactar o servidor, utilizando sincronização offline.");
+                carregarModoOffline();
+            }
+        } else {
+            carregarModoOffline();
+        }
+    }
+
+    function carregarModoOffline() {
+        const agendamentosAtuais = JSON.parse(localStorage.getItem('bd_agendamentos_sistema')) || [];
+        processarNovosAgendamentos(agendamentosAtuais);
+    }
+
+    function processarNovosAgendamentos(novosAgendamentos) {
+        if (novosAgendamentos.length > bdAgendamentos.length) {
+            // Detectou novos registros vindo de outros terminais!
+            const diferenca = novosAgendamentos.length - bdAgendamentos.length;
+            dispararAlertaInterface(diferenca);
+        }
+        bdAgendamentos = novosAgendamentos;
+        renderizarDashboard();
+    }
+
+    function dispararAlertaInterface(quantidade) {
+        dispararSomNotificacao();
+        if (motoristaLogado) {
+            iniciarLoopAlertaSonoro();
+            const toast = document.getElementById('toast-alerta-novo');
+            document.getElementById('toast-mensagem-detalhe').innerText = `Temos ${quantidade} nova(s) solicitações aguardando aprovação.`;
+            toast.style.display = 'block';
+        }
+    }
+
+    function fecharToastAlerta() {
+        document.getElementById('toast-alerta-novo').style.display = 'none';
+    }
+
+    // Polling contínuo (A cada 5 segundos busca novos dados dos outros terminais/servidor)
+    setInterval(sincronizarComServidor, 5000);
+
     function atualizarCampoValorMotorista() {
         const seletor = document.getElementById('select-valor-automatico');
         const campoValor = document.getElementById('valor');
@@ -438,7 +669,7 @@
         }
     }
 
-    // --- RETAIVIDADE INTERFACE PASSAGEIRO ---
+    // --- RETATIVIDADE INTERFACE PASSAGEIRO ---
     function checarStatusParaPassageiro() {
         const container = document.getElementById('status-ultimo-agendamento');
         if (!idUltimoAgendamento) { container.classList.add('d-none'); return; }
@@ -459,7 +690,7 @@
             if (realizado.status === 'Embarcado') {
                 container.innerHTML = `
                     <div class="alert alert-success text-center fw-bold shadow-sm mb-0 p-2" style="border: 2px solid #2ecc71;">
-                        <i class="fas fa-check-circle me-2"></i> ✅ SEU AGENDAMENTO FOI CONFIRMADO PELO MOTORISTA!
+                        <i class="fas fa-check-circle me-2"></i> ✅ SEU AGENDAMENTO FOI CONFIRMADO EM: ${realizado.vanAtribuida || 'FROTA ARS'}!
                     </div>`;
             } else {
                 container.innerHTML = `
@@ -497,6 +728,7 @@
             document.getElementById('btn-nav-login').classList.add('d-none');
             document.getElementById('btn-nav-logout').classList.remove('d-none');
             mostrarSecao('admin');
+            renderizarListaDeVans();
             renderizarDashboard();
         } else {
             document.getElementById('login-erro').classList.remove('d-none');
@@ -507,11 +739,13 @@
         motoristaLogado = false;
         document.getElementById('btn-nav-login').classList.remove('d-none');
         document.getElementById('btn-nav-logout').classList.add('d-none');
+        silenciarAlertaSonoro();
+        fecharToastAlerta();
         mostrarSecao('publico');
     }
 
     // --- ENVIAR DO PASSAGEIRO ---
-    function salvarAgendamentoPublico(e) {
+    async function salvarAgendamentoPublico(e) {
         e.preventDefault();
         const idGerado = Date.now();
         
@@ -525,12 +759,24 @@
             data: document.getElementById('pub-data').value
         };
 
+        // Salva na fila local
         bdAgendamentos.push(novoAgendamento);
         idUltimoAgendamento = idGerado;
         localStorage.setItem('id_ultimo_agendamento', idGerado);
         localStorage.setItem('bd_agendamentos_sistema', JSON.stringify(bdAgendamentos));
+
+        // Envia para o servidor se estiver conectado
+        if (URL_API_SERVIDOR) {
+            try {
+                await fetch(`${URL_API_SERVIDOR}/agendamentos`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(novoAgendamento)
+                });
+            } catch(e) { console.warn("Modo offline ativo."); }
+        }
         
-        alert("Solicitação enviada com sucesso! Aguarde a confirmação na tela.");
+        alert("Solicitação enviada ao servidor com sucesso! Aguarde a confirmação na tela.");
         document.getElementById('pub-nome').value = '';
         document.getElementById('pub-local').value = '';
         checarStatusParaPassageiro();
@@ -539,6 +785,7 @@
     // --- LANÇAMENTOS DO MOTORISTA ---
     function salvarLancamentoDireto(e) {
         e.preventDefault();
+        const vanAtribuida = document.getElementById('select-van-viagem').value;
         const novo = {
             id: Date.now(),
             tipo: document.getElementById('tipo').value,
@@ -547,6 +794,7 @@
             valor: parseFloat(document.getElementById('valor').value) || 0,
             pagamento: document.getElementById('pagamento').value,
             status: 'Embarcado',
+            vanAtribuida: vanAtribuida || 'Geral/Avulsa',
             data: document.getElementById('data-registro').value
         };
         bdViagens.push(novo);
@@ -558,10 +806,10 @@
     function confirmarEmbarque(id) {
         const agendamento = bdAgendamentos.find(item => item.id === id);
         if (agendamento) {
-            // Pega o valor definido no painel superior de pendências
             const valSel = document.getElementById('valor-pedido-pendente').value;
             const valMan = parseFloat(document.getElementById('valor-pedido-manual').value);
             const valorFinal = !isNaN(valMan) ? valMan : parseFloat(valSel);
+            const vanAtribuida = document.getElementById('select-van-despacho').value;
 
             const ind = agendamento.tipo === 'encomenda' ? '📦 Carga' : '👤';
             const novaViagem = {
@@ -572,13 +820,15 @@
                 valor: valorFinal,
                 pagamento: agendamento.pagamento,
                 status: 'Embarcado',
+                vanAtribuida: vanAtribuida || 'Geral/Avulsa',
                 data: agendamento.data
             };
             bdViagens.push(novaViagem);
             bdAgendamentos = bdAgendamentos.filter(item => item.id !== id);
             
-            // Limpa o campo manual extra
             document.getElementById('valor-pedido-manual').value = '';
+            silenciarAlertaSonoro();
+            fecharToastAlerta();
             atualizarSistemasLocais();
         }
     }
@@ -594,10 +844,13 @@
                 valor: 0,
                 pagamento: agendamento.pagamento,
                 status: 'Desistente',
+                vanAtribuida: 'Nenhuma',
                 data: agendamento.data
             };
             bdViagens.push(novaViagemDesistente);
             bdAgendamentos = bdAgendamentos.filter(item => item.id !== id);
+            silenciarAlertaSonoro();
+            fecharToastAlerta();
             atualizarSistemasLocais();
         }
     }
@@ -643,6 +896,7 @@
         } else {
             cartaoAlerta.classList.add('d-none');
             areaPrecoPendente.classList.add('d-none');
+            silenciarAlertaSonoro();
         }
 
         // Renderizar Rota de Espera
@@ -687,6 +941,7 @@
             tr.innerHTML = `
                 <td data-label="Data"><small class="fw-bold">${dataFmt}</small></td>
                 <td data-label="Identificação">${icone}<strong>${item.nome}</strong></td>
+                <td data-label="Frota / Van"><span class="badge bg-primary">${item.vanAtribuida || 'Geral/Avulsa'}</span></td>
                 <td data-label="Pgto"><span class="badge bg-body-secondary text-body border">${item.pagamento}</span></td>
                 <td data-label="Status"><span class="badge ${bColor}">${item.status}</span></td>
                 <td data-label="Passageiro" class="text-end fw-bold text-primary">${vPass}</td>
@@ -712,15 +967,15 @@
     }
 
     function exportarPlanilhaCSV() {
-        let csv = 'Data;Tipo;Identificacao;Pagamento;Status;Valor\n';
-        bdViagens.forEach(item => { csv += `${item.data};${item.tipo};${item.nome};${item.pagamento};${item.status};${item.valor.toFixed(2)}\n`; });
+        let csv = 'Data;Tipo;Identificacao;Van Responsavel;Pagamento;Status;Valor\n';
+        bdViagens.forEach(item => { csv += `${item.data};${item.tipo};${item.nome};${item.vanAtribuida};${item.pagamento};${item.status};${item.valor.toFixed(2)}\n`; });
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
         a.setAttribute("download", `Caixa_ARS.csv`); document.body.appendChild(a); a.click(); document.body.removeChild(a);
     }
 
     function exportarBackup() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ viagens: bdViagens, agendamentos: bdAgendamentos }, null, 2));
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ viagens: bdViagens, agendamentos: bdAgendamentos, vans: bdVans }, null, 2));
         const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `BACKUP_ARS.json`);
         document.body.appendChild(a); a.click(); a.removeChild(a);
     }
